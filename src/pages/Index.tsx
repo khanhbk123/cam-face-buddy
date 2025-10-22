@@ -1,8 +1,33 @@
-import FaceDetection from '@/components/FaceDetection';
-import { Sparkles, Brain, Shield } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Session } from '@supabase/supabase-js';
+import FaceDetectionAdvanced from '@/components/FaceDetectionAdvanced';
+import { Sparkles, Brain, Shield, LogOut, LogIn } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import heroBg from '@/assets/hero-bg.jpg';
 
 const Index = () => {
+  const [session, setSession] = useState<Session | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -18,6 +43,30 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background" />
         
         <div className="container relative z-10 mx-auto px-4">
+          <div className="flex justify-end mb-4">
+            {session ? (
+              <Button
+                onClick={handleLogout}
+                variant="secondary"
+                size="sm"
+                className="shadow-glow"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            ) : (
+              <Button
+                onClick={() => navigate('/auth')}
+                variant="secondary"
+                size="sm"
+                className="shadow-glow"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In
+              </Button>
+            )}
+          </div>
+
           <div className="text-center space-y-6 mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30">
               <Sparkles className="w-4 h-4 text-primary animate-pulse-glow" />
@@ -37,7 +86,19 @@ const Index = () => {
 
           {/* Main Feature */}
           <div className="max-w-4xl mx-auto mb-16">
-            <FaceDetection />
+            <FaceDetectionAdvanced />
+            
+            {!session && (
+              <div className="mt-6 text-center bg-background/80 backdrop-blur-sm p-6 rounded-lg border border-border">
+                <p className="text-muted-foreground mb-4">
+                  Sign in to save faces and enable face comparison features
+                </p>
+                <Button onClick={() => navigate('/auth')} className="bg-primary hover:bg-primary/90">
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign In to Continue
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Features Grid */}
